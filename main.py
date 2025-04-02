@@ -1,11 +1,18 @@
 import os
-import shutil
+import sys
 import zipfile
 import toml
 import requests
 import json
 
-LOCAL_MODS_PATH = "C:/Users/Johannes/Desktop/Minecraft/ScriptTesting/InstanceModsFolder"  # Update this
+# Dynamically set LOCAL_MODS_PATH based on script location
+if getattr(sys, 'frozen', False):
+    # If running from a PyInstaller executable, use the location of the .exe
+    base_path = os.path.dirname(sys.executable)
+else:
+    # If running as a script, use the location of the script
+    base_path = os.path.dirname(os.path.realpath(__file__))
+LOCAL_MODS_PATH = os.path.join(base_path, "mods")
 
 NETLIFY_BASE_URL = "https://6981e65b-f3f9-48cd-ac5f-573f755b02bd.netlify.app"
 
@@ -23,7 +30,7 @@ DEFAULT_CONFIG = {
     "optionalMods": True,
     "useVersionChecking": True,
 }
-CONFIG_FILE_PATH = os.path.join(os.path.dirname(__file__), "modupdaterconfig.json")
+CONFIG_FILE_PATH = os.path.join(base_path, "modupdaterconfig.json")
 
 def load_config():
     """Load configuration from a JSON file, or use default values if not found."""
@@ -36,7 +43,25 @@ def load_config():
         except (json.JSONDecodeError, IOError) as e:
             print(f"Error loading config file: {e}. Using default config.")
     else:
-        print("Config file not found. Using default config.")
+        print("Config file not found.")
+
+        create_file_input = input("Do you want to create a new config file? (y/n): ").strip().lower()
+        if create_file_input == 'y':
+            # Create the config file with default values
+            try:
+                with open(CONFIG_FILE_PATH, "w") as config_file:
+                    json.dump(DEFAULT_CONFIG, config_file, indent=4)
+                    print(f"Config file created at: {CONFIG_FILE_PATH}")
+                    print(f"current config: {DEFAULT_CONFIG}")
+                    exit_programm_input = input("Exit the program so you can modify the config file? (y/n): ")
+                    if exit_programm_input == 'y':
+                        exit() # Exit the program so the user can modify the config file
+                    else:
+                        print(f"Config file not modified. Continuing with default values: {DEFAULT_CONFIG}")
+            except Exception as e:
+                print(f"Failed to create config file: {e}")
+        else:
+            print("Config file not created. The program will continue with default config.")
     
     return DEFAULT_CONFIG
 
@@ -273,6 +298,23 @@ def update_mods():
     """Update mods while keeping client-side mods intact."""
     config = load_config()
     print(f"Current config: {config}")
+
+    if os.path.exists(LOCAL_MODS_PATH):
+        print(f"Using mods folder: {LOCAL_MODS_PATH}")
+    else:
+        print(f"Mods folder not found at: {LOCAL_MODS_PATH}.")
+        user_input = input("Do you want to create the mods folder? (y/n): ").strip().lower()
+        if user_input == 'y':
+            try:
+                # Create the mods folder
+                os.makedirs(LOCAL_MODS_PATH)
+                print(f"Mods folder created at: {LOCAL_MODS_PATH}")
+            except Exception as e:
+                print(f"Failed to create mods folder: {e}")
+        else:
+            print("Mods folder not created. The program will cancel its execution.")
+            exit()
+
     installed_mods = get_installed_mods(LOCAL_MODS_PATH)
 
     cloud_common_mods = get_cloud_modlist("common")
