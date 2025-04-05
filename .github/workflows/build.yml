@@ -11,7 +11,7 @@ on:
 jobs:
   # macOS Build Job
   build-macos:
-    runs-on: macos-latest
+    runs-on: macos-15
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -36,47 +36,47 @@ jobs:
           path: dist/ModUpdater
 
   # Windows Build Job
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  # build-windows:
+  #   runs-on: windows-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Install Python & Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install pyinstaller
-          python -m pip install -r requirements.txt  # Install all dependencies
+  #     - name: Install Python & Dependencies
+  #       run: |
+  #         python -m pip install --upgrade pip
+  #         python -m pip install pyinstaller
+  #         python -m pip install -r requirements.txt  # Install all dependencies
 
-      - name: Build with PyInstaller (Windows)
-        run: |
-          pyinstaller --onefile --name "ModUpdater.exe" main.py
+  #     - name: Build with PyInstaller (Windows)
+  #       run: |
+  #         pyinstaller --onefile --name "ModUpdater.exe" main.py
 
-      - name: Upload Executable (Windows)
-        uses: actions/upload-artifact@v4
-        with:
-          name: ModUpdater-Windows
-          path: dist/ModUpdater.exe
+  #     - name: Upload Executable (Windows)
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ModUpdater-Windows
+  #         path: dist/ModUpdater.exe
 
-  # Optional: Linux Build Job
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+  # # Optional: Linux Build Job
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v3
 
-      - name: Install Python & Dependencies
-        run: |
-          python3 -m pip install --upgrade pip
-          python3 -m pip install pyinstaller
-          python3 -m pip install -r requirements.txt
+  #     - name: Install Python & Dependencies
+  #       run: |
+  #         python3 -m pip install --upgrade pip
+  #         python3 -m pip install pyinstaller
+  #         python3 -m pip install -r requirements.txt
 
-      - name: Build with PyInstaller (Linux)
-        run: |
-          pyinstaller --onefile --name "ModUpdaterServer" server.py
+  #     - name: Build with PyInstaller (Linux)
+  #       run: |
+  #         pyinstaller --onefile --name "ModUpdaterServer" server.py
 
-      - name: Upload Executable (Linux)
-        uses: actions/upload-artifact@v4
-        with:
-          name: ModUpdaterServer-Linux
-          path: dist/ModUpdaterServer
+  #     - name: Upload Executable (Linux)
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: ModUpdaterServer-Linux
+  #         path: dist/ModUpdaterServer
