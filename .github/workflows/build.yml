@@ -11,7 +11,7 @@ on:
 jobs:
   # macOS Build Job
   build-macos:
-    runs-on: macos-15
+    runs-on: macos-15.1.1
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
