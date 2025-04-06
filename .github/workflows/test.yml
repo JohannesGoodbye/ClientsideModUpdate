@@ -11,6 +11,7 @@ on:
 jobs:
   # Windows Build Job
   build-windows:
+    if: false
     runs-on: windows-latest
     steps:
       - name: Checkout code

@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import sys
 import zipfile
@@ -51,7 +52,7 @@ def load_config():
                     print(f"current config: {DEFAULT_CONFIG}")
                     exit_programm_input = input("Exit the program so you can modify the config file? (y/n): ")
                     if exit_programm_input == 'y':
-                        exit() # Exit the program so the user can modify the config file
+                        sys.exit(0) # Exit the program so the user can modify the config file
                     else:
                         print(f"Config file not modified. Continuing with default values: {DEFAULT_CONFIG}")
             except Exception as e:
@@ -303,7 +304,7 @@ def update_mods():
                 print(f"Failed to create mods folder: {e}")
         else:
             print("Mods folder not created. The program will cancel its execution.")
-            exit()
+            sys.exit()
 
     installed_mods = get_installed_mods(LOCAL_MODS_PATH)
 

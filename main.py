@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import os
 import sys
 import zipfile
@@ -55,7 +56,7 @@ def load_config():
                     print(f"current config: {DEFAULT_CONFIG}")
                     exit_programm_input = input("Exit the program so you can modify the config file? (y/n): ")
                     if exit_programm_input == 'y':
-                        exit() # Exit the program so the user can modify the config file
+                        sys.exit(0) # Exit the program so the user can modify the config file
                     else:
                         print(f"Config file not modified. Continuing with default values: {DEFAULT_CONFIG}")
             except Exception as e:
@@ -313,7 +314,7 @@ def update_mods():
                 print(f"Failed to create mods folder: {e}")
         else:
             print("Mods folder not created. The program will cancel its execution.")
-            exit()
+            sys.exit()
 
     installed_mods = get_installed_mods(LOCAL_MODS_PATH)
 
@@ -383,13 +384,13 @@ def update_mods():
 
                 local_version = local_versions[kept_file_index]
                 if local_version == cloud_version and not config.get("forceUpdate", False):
-                    print(f"{mod_id} ({local_filenames[kept_file_index]}) is already up-to-date. 23")
+                    print(f"{mod_id} ({local_filenames[kept_file_index]}) is already up-to-date.")
                     continue
                 else:
                     os.remove(os.path.join(LOCAL_MODS_PATH, local_filenames[kept_file_index]))
                     print(f"Removed outdated mod file: {local_filenames[kept_file_index]}")
                     # Download the correct version (if not already present)
-                    print(f"Downloading updated version of {mod_id}: {cloud_filename} 23")
+                    print(f"Downloading updated version of {mod_id}: {cloud_filename}")
                     download_mod(cloud_filename, environment)
             else:    
                 # If not using version checking, check filename mismatch
