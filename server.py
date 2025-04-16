@@ -147,7 +147,21 @@ def get_mod_version_from_toml(mod_path):
                     mods_section = mod_info.get("mods", [])
                     if mods_section and isinstance(mods_section, list):
                         mod_version = mods_section[0].get("version")
-                        if mod_version:
+                        if mod_version == "${file.jarVersion}":
+                            print(f"Found '${{file.jarVersion}}' in mods.toml ({mod_path}). Attempting to read from MANIFEST.MF...")
+                            # Try to read MANIFEST.MF instead
+                            manifest_path = "META-INF/MANIFEST.MF"
+                            if manifest_path in jar.namelist():
+                                with jar.open(manifest_path) as manifest_file:
+                                    for line in manifest_file.read().decode("utf-8").splitlines():
+                                        if line.startswith("Implementation-Version:"):
+                                            real_version = line.split(":", 1)[1].strip()
+                                            print(f"Resolved version from MANIFEST.MF ({mod_path}): {real_version}")
+                                            return real_version
+                                    print(f"No 'Implementation-Version' found in MANIFEST.MF for {mod_path}")
+                            else:
+                                print(f"MANIFEST.MF not found in {mod_path}")
+                        elif mod_version:
                             return mod_version
 
     except Exception as e:
