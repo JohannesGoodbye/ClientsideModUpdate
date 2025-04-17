@@ -1,0 +1,10 @@
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore mods folder
+mods/
+
+test.py
