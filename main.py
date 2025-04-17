@@ -92,6 +92,40 @@ def get_mod_id_from_toml(mod_path):
 
     return None
 
+def get_mod_id_kotlin_case(mod_path):
+    """Extract mod ID from loader.properties in the jar structure."""
+    try:
+        with zipfile.ZipFile(mod_path, 'r') as jar:
+            # Look for any file ending with loader.properties
+            metadata_path = "META-INF/jarjar/metadata.json"
+            if metadata_path in jar.namelist():
+                with jar.open(metadata_path) as json_file:
+                    # Now load the JSON content
+                    metadata = json.load(json_file)
+                    mod_file_path = None
+                    for jars in metadata['jars']:
+                        if jars['identifier']['artifact'] == 'kffmod':
+                            mod_file_path = jars['path']
+                            break
+
+                    if mod_file_path:
+                        print(f"Found mod path: {mod_file_path} in metadata.json from {mod_path}")
+                        with zipfile.ZipFile(mod_path, 'r') as parent_jar:
+                            if mod_file_path in parent_jar.namelist():
+                                print(f"Looking for mod ID in real mod jar: {mod_file_path}")
+                                mod_id = get_mod_id_from_toml(parent_jar.open(mod_file_path))
+                                if mod_id:
+                                    return mod_id
+                            else:
+                                print(f"Real mod file {mod_file_path} not found in {mod_path}.")
+
+            else:
+                print(f"metadata.json file not found in {mod_path}.")
+    except Exception as e:
+        print(f"Failed to extract mod ID from {mod_path}: {e}")
+
+    return None
+
 
 def get_mod_id_from_loader_properties(mod_path):
     """Extract mod ID from loader.properties in the jar structure."""
@@ -213,6 +247,40 @@ def get_mod_version_from_loader_properties(mod_path):
 
     return None
 
+def get_mod_version_kotlin_case(mod_path):
+    """Extract mod ID from loader.properties in the jar structure."""
+    try:
+        with zipfile.ZipFile(mod_path, 'r') as jar:
+            # Look for any file ending with loader.properties
+            metadata_path = "META-INF/jarjar/metadata.json"
+            if metadata_path in jar.namelist():
+                with jar.open(metadata_path) as json_file:
+                    # Now load the JSON content
+                    metadata = json.load(json_file)
+                    mod_file_path = None
+                    for jars in metadata['jars']:
+                        if jars['identifier']['artifact'] == 'kffmod':
+                            mod_file_path = jars['path']
+                            break
+
+                    if mod_file_path:
+                        print(f"Found mod path: {mod_file_path} in metadata.json from {mod_path}")
+                        with zipfile.ZipFile(mod_path, 'r') as parent_jar:
+                            if mod_file_path in parent_jar.namelist():
+                                print(f"Looking for mod version in real mod jar: {mod_file_path}")
+                                mod_version = get_mod_version_from_toml(parent_jar.open(mod_file_path))
+                                if mod_version:
+                                    return mod_version
+                            else:
+                                print(f"Real mod file {mod_file_path} not found in {mod_path}.")
+
+            else:
+                print(f"metadata.json file not found in {mod_path}.")
+    except Exception as e:
+        print(f"Failed to extract mod version from {mod_path}: {e}")
+
+    return None
+
 def get_installed_mods(mods_path):
     """Retrieve a dictionary of installed mod IDs mapped to a list of their filenames."""
     installed_mods = {}
@@ -225,10 +293,16 @@ def get_installed_mods(mods_path):
             if not mod_id:
                 print(f"Mod ID not found in {filename}, checking loader.properties...")
                 mod_id = get_mod_id_from_loader_properties(mod_path)
+            if not mod_id:
+                print(f"Mod ID not found in {filename}, checking metadata.json...")
+                mod_id = get_mod_id_kotlin_case(mod_path)
             
             if not mod_version:
                 print(f"Mod version not found in {filename}, checking loader.properties...")
                 mod_version = get_mod_version_from_loader_properties(mod_path)
+            if not mod_version:
+                print(f"Mod version not found in {filename}, checking metadata.json...")
+                mod_version = get_mod_version_kotlin_case(mod_path)
 
             if mod_id:
                 if mod_id not in installed_mods:
@@ -265,18 +339,39 @@ def get_cloud_modlist(environment):
         print(f"Failed to fetch {environment} modlist.txt from {mod_url}")
         return {}
     
-def download_and_extract_zip(zip_filename, environment):
+def download_and_extract_zips(base_zip_name, environment):
     """Download a mod zip file and extract its contents."""
     if environment == "common":
-        mod_url = f"{NETLIFY_COMMON_MODS_URL}/{zip_filename}"
+        base_url = NETLIFY_COMMON_MODS_URL
     elif environment == "client":
-        mod_url = f"{NETLIFY_CLIENT_MODS_URL}/{zip_filename}"
+        base_url = NETLIFY_CLIENT_MODS_URL
     elif environment == "clientadditional":
-        mod_url = f"{NETLIFY_OPTIONAL_MODS_URL}/{zip_filename}"
+        base_url = NETLIFY_OPTIONAL_MODS_URL
+    else:
+        print(f"Unknown environment for downloading mods.zip: {environment}")
+        return
 
-    response = requests.get(mod_url, stream=True)
+
+    index = 0
+    while True:
+        zip_filename = (
+            f"{base_zip_name}" if index == 0
+            else f"{os.path.splitext(base_zip_name)[0]}{index}.zip"
+        )
+        zip_url = f"{base_url}/{zip_filename}"
+        print(f"Trying to download: {zip_url}")
+
+        response = requests.get(zip_url, stream=True)
     
-    if response.status_code == 200:
+        if response.status_code != 200:
+            if index == 0:
+                print(f"No zip file found at {zip_url}")
+                index += 1
+                continue
+            elif index > 0:
+                print(f"No zip file found at {zip_url}")
+                break
+
         zip_path = os.path.join(LOCAL_MODS_PATH, zip_filename)
         with open(zip_path, 'wb') as zip_file:
             zip_file.write(response.content)
@@ -286,8 +381,7 @@ def download_and_extract_zip(zip_filename, environment):
             zip_ref.extractall(LOCAL_MODS_PATH)
         print(f"Extracted mods from {zip_filename} ({environment}) into {LOCAL_MODS_PATH}")
         os.remove(zip_path)  # Remove the zip file after extraction
-    else:
-        print(f"Failed to download {zip_filename} ({environment}) from {mod_url}")
+        index += 1
 
 def download_mod(mod_filename, environment):
     """Download a mod file from the Netlify server."""
@@ -345,12 +439,12 @@ def update_mods():
     if not installed_mods:
         print("No mods installed | Starting the downloading process")
         print("Downloading mods.zip (common)")
-        download_and_extract_zip("mods.zip", "common")
+        download_and_extract_zips("mods.zip", "common")
         print("Downloading mods.zip (client)")
-        download_and_extract_zip("mods.zip", "client")
+        download_and_extract_zips("mods.zip", "client")
         if config.get("optionalMods", True) :
             print("Downloading mods.zip (clientadditional)")
-            download_and_extract_zip("mods.zip", "clientadditional")
+            download_and_extract_zips("mods.zip", "clientadditional")
         print("Mod downloading complete!")
         return
     
