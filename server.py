@@ -39,7 +39,7 @@ def update_mods():
                 print(f"Failed to create mods folder: {e}")
         else:
             print("Mods folder not created. The program will cancel its execution.")
-            sys.exit()
+            core.safe_exit()
 
     installed_mods = core.get_installed_mods(LOCAL_MODS_PATH)
 
@@ -57,7 +57,7 @@ def update_mods():
         print("Downloading mods.zip (server)")
         core.download_and_extract_zips("mods.zip", "server", LOCAL_MODS_PATH)
         print("Mod downloading complete!")
-        return
+        core.safe_exit()
     
     for mod_id, mod_data in cloud_mods.items():
         cloud_filename = mod_data['filename']
@@ -136,6 +136,7 @@ def update_mods():
             core.download_mod(cloud_filename, environment, LOCAL_MODS_PATH)
 
     print("Mod update complete!")
+    core.safe_exit()
 
 if __name__ == "__main__":
     update_mods()
