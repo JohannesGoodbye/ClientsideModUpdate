@@ -2,11 +2,8 @@ name: Build Executables for Multiple Platforms
 
 on:
   push:
-    branches:
-      - main  # Trigger on push to the main branch
-  pull_request:
-    branches:
-      - main  # Trigger on pull requests to the main branch
+    tags:
+      - "v*"  # Trigger on push to the main branch
 
 jobs:
   # macOS Build Job
@@ -82,3 +79,41 @@ jobs:
         with:
           name: ModUpdaterServer-Linux
           path: dist/ModUpdaterServer
+
+  # GitHub Release Job
+  release:
+    needs: [build-windows]  # Add build-macos and build-linux if enabled
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ModUpdater-Windows
+          path: artifacts/windows
+
+      # Uncomment below if enabling macOS
+      # - name: Download macOS Artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ModUpdater-macOS
+      #     path: artifacts/macos
+
+      # Uncomment below if enabling Linux
+      # - name: Download Linux Artifact
+      #   uses: actions/download-artifact@v4
+      #   with:
+      #     name: ModUpdaterServer-Linux
+      #     path: artifacts/linux
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/windows/ModUpdater.exe
+            # artifacts/macos/ModUpdater
+            # artifacts/linux/ModUpdaterServer
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

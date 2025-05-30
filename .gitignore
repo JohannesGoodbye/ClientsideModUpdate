@@ -4,7 +4,14 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Ignore mods folder
+# Ignore testing stuff
 mods/
+modupdaterconfig.json
+cloud_forced_update_log.json
+
+#Ignore pyinstaller stuff
+build/
+dist/
+ModUpdater.exe.spec
 
 test.py

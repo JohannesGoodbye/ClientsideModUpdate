@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
+import json
 import os
 import sys
 import mod_updater_core as core
+import colored_prints as colored
 
 # Dynamically set LOCAL_MODS_PATH based on script location
 if getattr(sys, 'frozen', False):
@@ -12,9 +14,10 @@ else:
     base_path = os.path.dirname(os.path.realpath(__file__))
     
 LOCAL_MODS_PATH = os.path.join(base_path, "mods")
+FORCE_UPDATE_LOG_PATH = os.path.join(base_path, "cloud_forced_update_log.json")
 
 DEFAULT_CONFIG = {
-    "forceUpdate": False,
+    "updateAll": False,
     "optionalMods": True,
     "useVersionChecking": True,
 }
@@ -34,14 +37,16 @@ def update_mods():
             try:
                 # Create the mods folder
                 os.makedirs(LOCAL_MODS_PATH)
-                print(f"Mods folder created at: {LOCAL_MODS_PATH}")
+                print(colored.cyan(f"Mods folder created at: {LOCAL_MODS_PATH}"))
             except Exception as e:
-                print(f"Failed to create mods folder: {e}")
+                print(colored.red(f"Failed to create mods folder: {e}"))
         else:
-            print("Mods folder not created. The program will cancel its execution.")
+            print(colored.red("Mods folder not created. The program will cancel its execution."))
             core.safe_exit()
 
     installed_mods = core.get_installed_mods(LOCAL_MODS_PATH)
+
+    force_update_log = {}
 
     cloud_common_mods = core.get_cloud_modlist("common")
     cloud_mods = cloud_common_mods
@@ -62,7 +67,8 @@ def update_mods():
         if config.get("optionalMods", True) :
             print("Downloading mods.zip (clientadditional)")
             core.download_and_extract_zips("mods.zip", "clientadditional", LOCAL_MODS_PATH)
-        print("Mod downloading complete!")
+        core.writeForceUpdateLog(FORCE_UPDATE_LOG_PATH, force_update_log)
+        print(colored.green("Mod downloading complete!"))
         core.safe_exit()
     
     for mod_id, mod_data in cloud_mods.items():
@@ -74,7 +80,7 @@ def update_mods():
             local_filenames = installed_mods[mod_id][0]  # List of installed filenames for this mod ID
             local_versions = installed_mods[mod_id][1]  # List of installed versions of this mod ID
             
-            if config.get("useVersionChecking", True) and not config.get("forceUpdate", False):
+            if config.get("useVersionChecking", True) and not config.get("updateAll", False):
                 outdated_files = [
                     local_filenames[i] for i, version in enumerate(local_versions) if version != cloud_version
                 ]
@@ -92,56 +98,66 @@ def update_mods():
                     duplicated_files.extend(files_to_remove)
 
                 for duplicated_file in duplicated_files:
-                    try:
-                        os.remove(os.path.join(LOCAL_MODS_PATH, duplicated_file))
-                        local_filenames.remove(duplicated_file)
-                        print(f"Removed mod file duplicate: {duplicated_file}")
-                    except FileNotFoundError:
-                        print(f"File {duplicated_file} not found, skipping deletion.")
+                    core.removeWithCheck(os.path.join(LOCAL_MODS_PATH, duplicated_file), f"Removed mod file duplicate: {duplicated_file}", f"File {duplicated_file} not found, skipping deletion.")
 
                 for outdated_file in outdated_files:
-                    try:
-                        os.remove(os.path.join(LOCAL_MODS_PATH, outdated_file))
-                        local_filenames.remove(outdated_file)
-                        print(f"Removed outdated mod file: {outdated_file}")
-                    except FileNotFoundError:
-                        print(f"File {outdated_file} not found, skipping deletion.")
+                    core.removeWithCheck(os.path.join(LOCAL_MODS_PATH, outdated_file), f"Removed outdated mod file: {outdated_file}", f"File {outdated_file} not found, skipping deletion.")
 
                 local_version = local_versions[kept_file_index]
-                if local_version == cloud_version and not config.get("forceUpdate", False):
-                    print(f"{mod_id} ({local_filenames[kept_file_index]}) is already up-to-date.")
-                    continue
+                if local_version == cloud_version and not config.get("updateAll", False):
+                    newRandomSeqeunce = core.updateWhenForceUpdate(mod_id, FORCE_UPDATE_LOG_PATH)
+                    if newRandomSeqeunce == "":
+                        print(f"{mod_id} ({local_filenames[kept_file_index]}) is already up-to-date.")
+                        continue
+                    elif newRandomSeqeunce == core.get_recent_force_update(mod_id, FORCE_UPDATE_LOG_PATH):
+                        force_update_log[mod_id] = newRandomSeqeunce
+                        print(f"{mod_id} ({local_filenames[kept_file_index]}) is already up-to-date.")
+                        continue
+                    else:
+                        print(f"Updating {mod_id} caused by cloud force update")
+                        core.removeWithCheck(os.path.join(LOCAL_MODS_PATH, local_filenames[kept_file_index]), "", "")
+                        print(colored.cyan(f"Downloading updated version of {mod_id}: {cloud_filename}"))
+                        core.download_mod(cloud_filename, environment, LOCAL_MODS_PATH)
+                        force_update_log[mod_id] = newRandomSeqeunce
                 else:
-                    os.remove(os.path.join(LOCAL_MODS_PATH, local_filenames[kept_file_index]))
-                    print(f"Removed outdated mod file: {local_filenames[kept_file_index]}")
+                    core.removeWithCheck(os.path.join(LOCAL_MODS_PATH, local_filenames[kept_file_index]), f"Removed outdated mod file: {local_filenames[kept_file_index]}", "")
                     # Download the correct version (if not already present)
-                    print(f"Downloading updated version of {mod_id}: {cloud_filename}")
+                    print(colored.cyan(f"Downloading updated version of {mod_id}: {cloud_filename}"))
                     core.download_mod(cloud_filename, environment, LOCAL_MODS_PATH)
             else:    
                 # If not using version checking, check filename mismatch
                 outdated_files = [f for f in local_filenames if f != cloud_filename]
                 for outdated_file in outdated_files:
-                    try:
-                        os.remove(os.path.join(LOCAL_MODS_PATH, outdated_file))
-                        local_filenames.remove(outdated_file)
-                        print(f"Removed outdated mod file: {outdated_file}")
-                    except FileNotFoundError:
-                        print(f"File {outdated_file} not found, skipping deletion.")
+                    core.removeWithCheck(os.path.join(LOCAL_MODS_PATH, outdated_file), f"Removed outdated mod file: {outdated_file}", f"File {outdated_file} not found, skipping deletion.")
             
                 # If the correct file is already there, don't re-download
-                if cloud_filename in local_filenames and not config.get("forceUpdate", False):
-                    print(f"{mod_id} ({cloud_filename}) is already up-to-date.")
-                    continue
+                if cloud_filename in local_filenames and not config.get("updateAll", False):
+                    newRandomSeqeunce = core.updateWhenForceUpdate(mod_id, FORCE_UPDATE_LOG_PATH)
+                    if newRandomSeqeunce == "":
+                        print(f"{mod_id} ({local_filenames[kept_file_index]}) is already up-to-date.")
+                        continue
+                    elif newRandomSeqeunce == core.get_recent_force_update(mod_id, FORCE_UPDATE_LOG_PATH):
+                        force_update_log[mod_id] = newRandomSeqeunce
+                        print(f"{mod_id} ({local_filenames[kept_file_index]}) is already up-to-date.")
+                        continue
+                    else:
+                        print(f"Updating {mod_id} caused by cloud force update")
+                        core.removeWithCheck(os.path.join(LOCAL_MODS_PATH, local_filenames[kept_file_index]), "", "")
+                        print(colored.cyan(f"Downloading updated version of {mod_id}: {cloud_filename}"))
+                        core.download_mod(cloud_filename, environment, LOCAL_MODS_PATH)
+                        force_update_log[mod_id] = newRandomSeqeunce
                 
                 # Download the correct version (if not already present)
-                print(f"Downloading updated version of {mod_id}: {cloud_filename}")
+                print(colored.cyan(f"Downloading updated version of {mod_id}: {cloud_filename}"))
                 core.download_mod(cloud_filename, environment, LOCAL_MODS_PATH)
         else:
             # If mod is not installed at all, download it
-            print(f"New mod found: {mod_id} | Downloading {cloud_filename}.")
+            print(colored.cyan(f"New mod found: {mod_id} | Downloading {cloud_filename}."))
             core.download_mod(cloud_filename, environment, LOCAL_MODS_PATH)
 
-    print("Mod update complete!")
+    core.writeForceUpdateLog(FORCE_UPDATE_LOG_PATH, force_update_log)
+
+    print(colored.green("Mod update complete!"))
     core.safe_exit()
 
 if __name__ == "__main__":
