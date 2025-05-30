@@ -27,6 +27,12 @@ jobs:
           source venv/bin/activate
           pyinstaller --onefile --name "ModUpdater" main.py
 
+      - name: Upload Executable (macOS)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ModUpdater-macOS
+          path: dist/ModUpdater
+
   # Windows Build Job
   build-windows:
     runs-on: windows-latest
@@ -43,6 +49,12 @@ jobs:
       - name: Build with PyInstaller (Windows)
         run: |
           pyinstaller --onefile --name "ModUpdater.exe" main.py
+
+      - name: Upload Executable (Windows)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ModUpdater-Windows
+          path: dist/ModUpdater.exe
 
   # Optional: Linux Build Job
   build-linux:
@@ -61,6 +73,12 @@ jobs:
       - name: Build with PyInstaller (Linux)
         run: |
           pyinstaller --onefile --name "ModUpdaterServer" server.py
+
+      - name: Upload Executable (Linux)
+        uses: actions/upload-artifact@v4
+        with:
+          name: ModUpdaterServer-Linux
+          path: dist/ModUpdaterServer
 
   # GitHub Release Job
   release:
