@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 import os
 import sys
 import mod_updater_core as core
