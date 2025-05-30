@@ -8,6 +8,7 @@ __pycache__/
 mods/
 modupdaterconfig.json
 cloud_forced_update_log.json
+server.py
 server2.py
 
 #Ignore pyinstaller stuff
