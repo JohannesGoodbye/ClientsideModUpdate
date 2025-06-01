@@ -16,6 +16,7 @@ LOCAL_MODS_PATH = os.path.join(base_path, "mods")
 FORCE_UPDATE_LOG_PATH = os.path.join(base_path, "cloud_forced_update_log.json")
 
 DEFAULT_CONFIG = {
+    "url": "",
     "updateAll": False,
     "optionalMods": True,
     "useVersionChecking": True,
