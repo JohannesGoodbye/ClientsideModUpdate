@@ -3,6 +3,8 @@ import os
 import sys
 import mod_updater_core as core
 import colored_prints as colored
+import warnings
+warnings.filterwarnings("ignore", message="pkg_resources is deprecated*")
 
 # Dynamically set LOCAL_MODS_PATH based on script location
 if getattr(sys, 'frozen', False):
